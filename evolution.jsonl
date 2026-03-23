@@ -1,0 +1,9 @@
+{"cycle":0,"timestamp":"2026-03-23T15:42:07Z","status":"plan_failed"}
+{"cycle":1,"timestamp":"2026-03-23T15:47:15Z","status":"plan_failed"}
+{"cycle":2,"timestamp":"2026-03-23T15:54:02Z","status":"plan_failed"}
+{"cycle":3,"timestamp":"2026-03-23T15:56:18Z","status":"apply_failed","error":"ERROR:no_json_found"}
+{"cycle":4,"timestamp":"2026-03-23T16:00:31Z","status":"apply_failed","error":"ERROR:no_json_found"}
+{"cycle":5,"timestamp":"2026-03-23T16:07:17Z","status":"apply_failed","error":"ERROR:no_json_found"}
+{"cycle":6,"timestamp":"2026-03-23T16:16:00Z","status":"json_failed","reasoner_chars":25945}
+{"cycle":7,"timestamp":"2026-03-23T16:20:09Z","status":"json_failed","reasoner_chars":25042}
+{"cycle":8,"timestamp":"2026-03-23T16:24:21Z","status":"json_failed","reasoner_chars":29643}
