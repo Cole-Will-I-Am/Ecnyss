@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Ecnyss autonomous runner - main entry point for self-evolution.
 
-Executes pre-flight cleanup, health validation, and prepares for autonomous cycles.
-Completes the infrastructure for fully autonomous operation (cycle 22).
+Executes pre-flight cleanup, health validation, and runs autonomous cycles.
+Completes the transition to fully autonomous operation (cycle 23).
 """
 import sys
 from pathlib import Path
 from typing import List
 
 from health_monitor import HealthMonitor
+from cycle_driver import CycleDriver
 
 
 def clean_corrupted_artifacts(base_path: Path) -> List[str]:
@@ -37,15 +38,15 @@ def clean_corrupted_artifacts(base_path: Path) -> List[str]:
 
 
 def main() -> int:
-    """Run Ecnyss autonomous evolution pre-flight and validation."""
+    """Run Ecnyss autonomous evolution."""
     base_path = Path("/root/Ecnyss")
     
     print("=" * 60)
-    print("Ecnyss Autonomous System - Cycle #22 Entry Point")
+    print("Ecnyss Autonomous System - Cycle #23")
     print("=" * 60)
     
     # Step 1: Clean corrupted artifacts from failed cycles
-    print("\n[1/3] Running recovery for corrupted artifacts...")
+    print("\n[1/4] Running recovery for corrupted artifacts...")
     cleaned = clean_corrupted_artifacts(base_path)
     if cleaned:
         print(f"Recovered {len(cleaned)} corrupted file(s)")
@@ -53,7 +54,7 @@ def main() -> int:
         print("No corrupted artifacts found")
     
     # Step 2: System health validation
-    print("\n[2/3] Validating system health...")
+    print("\n[2/4] Validating system health...")
     health = HealthMonitor(base_path)
     report = health.generate_health_report()
     
@@ -69,24 +70,31 @@ def main() -> int:
         print("\n[ABORT] System health degraded. Run recovery before evolution.")
         return 1
     
-    # Step 3: Ready for autonomous operation
-    print("\n[3/3] System validation complete")
-    print("\nInfrastructure status:")
-    print("  ✓ self_reader.py - Source reading")
-    print("  ✓ state_tracker.py - State management") 
-    print("  ✓ code_analyzer.py - Static analysis")
-    print("  ✓ cycle_optimizer.py - Pattern optimization")
-    print("  ✓ decision_engine.py - Evolution planning")
-    print("  ✓ evolution_executor.py - File operations")
-    print("  ✓ output_validator.py - Output validation")
-    print("  ✓ autonomous_orchestrator.py - Component integration")
-    print("  ✓ health_monitor.py - Integrity checking")
-    print("  ✓ recovery_engine.py - Self-healing")
-    print("  ✓ cycle_driver.py - Cycle orchestration")
-    print("\n[READY] Ecnyss ready for autonomous evolution")
-    print("Execute cycle_driver.py to begin self-modification loop")
+    # Step 3: Execute autonomous evolution cycle
+    print("\n[3/4] Executing autonomous evolution cycle...")
+    try:
+        driver = CycleDriver(base_path)
+        success = driver.run_cycle()
+        
+        if success:
+            print("\n[SUCCESS] Autonomous cycle completed")
+        else:
+            print("\n[WARNING] Cycle completed with issues")
+            return 1
+            
+    except Exception as e:
+        print(f"\n[ERROR] Cycle execution failed: {e}")
+        return 1
     
-    return 0
+    # Step 4: Post-cycle validation
+    print("\n[4/4] Post-cycle health check...")
+    final_report = health.generate_health_report()
+    if final_report['overall_status'] == 'healthy':
+        print("[READY] System healthy and ready for next cycle")
+        return 0
+    else:
+        print("[DEGRADED] System health issues detected post-cycle")
+        return 1
 
 
 if __name__ == "__main__":
