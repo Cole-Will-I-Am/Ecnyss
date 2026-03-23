@@ -1,175 +1,132 @@
 #!/usr/bin/env python3
-"""Main entry point for Ecnyss autonomous evolution (cycle 36).
+"""Main entry point for Ecnyss autonomous evolution system.
 
-Integrates maintenance engine for log compaction, orphaned file cleanup,
-and sustainable long-term autonomous operation.
+Cycle 39: Integrated performance tracking for data-driven optimization.
 """
 import sys
-import json
+import os
 from pathlib import Path
-from datetime import datetime
 
-# Import all infrastructure components
+# Add current directory to path for imports
+sys.path.insert(0, str(Path(__file__).parent))
+
+from performance_tracker import PerformanceTracker
 from health_monitor import HealthMonitor
 from recovery_engine import RecoveryEngine
-from dependency_analyzer import DependencyAnalyzer
-from self_reader import EcnyssReader
-from code_analyzer import CodeAnalyzer
-from decision_engine import DecisionEngine
-from output_validator import OutputValidator
-from evolution_executor import EvolutionExecutor
+from autonomous_orchestrator import AutonomousOrchestrator
 from backup_manager import BackupManager
 from maintenance_engine import MaintenanceEngine
+from dependency_analyzer import DependencyAnalyzer
 from evolution_analyzer import EvolutionAnalyzer
+from decision_engine import DecisionEngine
+from evolution_executor import EvolutionExecutor
+from output_validator import OutputValidator
+from test_runner import TestRunner
 
-def get_current_cycle(base_path: Path) -> int:
-    """Determine current cycle from evolution log."""
-    log_path = base_path / "evolution.jsonl"
-    if not log_path.exists():
-        return 1
-    
-    max_cycle = 0
-    try:
-        with open(log_path, 'r') as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    entry = json.loads(line)
-                    cycle = entry.get('cycle', 0)
-                    if cycle > max_cycle:
-                        max_cycle = cycle
-                except json.JSONDecodeError:
-                    continue
-    except Exception:
-        pass
-    
-    return max_cycle + 1
 
 def main():
-    """Execute autonomous evolution cycle with full maintenance integration."""
-    base_path = Path("/root/Ecnyss")
-    current_cycle = get_current_cycle(base_path)
+    """Execute autonomous evolution cycle with performance tracking."""
+    cycle = 39
     
-    print(f"=== Ecnyss Cycle #{current_cycle} ===")
-    print(f"Started at: {datetime.utcnow().isoformat()}")
-    
-    # Initialize all components
-    health = HealthMonitor(str(base_path))
-    recovery = RecoveryEngine(str(base_path))
-    deps = DependencyAnalyzer(str(base_path))
-    reader = EcnyssReader(str(base_path))
-    analyzer = CodeAnalyzer()
-    decision = DecisionEngine()
-    validator = OutputValidator()
-    executor = EvolutionExecutor(str(base_path))
-    backup = BackupManager(str(base_path), retention_cycles=10)
-    maintenance = MaintenanceEngine(str(base_path))
-    evo_analyzer = EvolutionAnalyzer(str(base_path))
-    
-    orphaned_files = []
+    # Initialize performance tracker
+    tracker = PerformanceTracker()
+    tracker.start_step("cycle_init")
+    tracker.end_step("cycle_init", success=True)
     
     try:
-        # Step 1: Health check
-        print("\n[1/9] Health monitoring...")
-        health_status = health.full_system_check()
-        if not health_status.get("healthy", False):
-            print("Health issues detected, attempting recovery...")
-            recovery.clean_corrupted_artifacts()
-            health_status = health.full_system_check()
-        print(f"Health status: {'HEALTHY' if health_status.get('healthy') else 'DEGRADED'}")
+        # Step 1: Health check with performance tracking
+        tracker.start_step("health_check")
+        health = HealthMonitor()
+        health_status = health.check_all()
+        healthy = health_status.get('healthy', False)
+        tracker.end_step("health_check", success=healthy, metadata=health_status)
         
-        # Step 2: Dependency analysis (capture orphans for maintenance)
-        print("\n[2/9] Dependency analysis...")
-        dep_analysis = deps.analyze_dependencies()
-        orphaned_files = dep_analysis.get("orphaned_files", [])
-        circular_deps = dep_analysis.get("circular_dependencies", [])
-        core_files = dep_analysis.get("core_files", [])
+        if not healthy:
+            # Step 2: Recovery if needed
+            tracker.start_step("recovery")
+            recovery = RecoveryEngine()
+            recovery_status = recovery.repair_all()
+            tracker.end_step("recovery", success=recovery_status.get('repaired', False), metadata=recovery_status)
         
-        print(f"Dependencies: {len(dep_analysis.get('dependencies', {}))} files")
-        print(f"Orphaned files: {len(orphaned_files)}")
-        print(f"Circular dependencies: {len(circular_deps)}")
-        print(f"Core infrastructure files: {len(core_files)}")
+        # Step 3: Dependency analysis
+        tracker.start_step("dependency_analysis")
+        deps = DependencyAnalyzer()
+        dep_report = deps.analyze_all()
+        tracker.end_step("dependency_analysis", success=True, metadata={"orphaned_count": len(dep_report.get('orphaned', []))})
         
-        # Step 3: Self-reading
-        print("\n[3/9] Self-reading...")
-        context = reader.gather_context_for_evolution()
-        print(f"Read {len(context.get('files', []))} files")
+        # Step 4: Evolution analysis
+        tracker.start_step("evolution_analysis")
+        evo = EvolutionAnalyzer()
+        patterns = evo.analyze_patterns()
+        tracker.end_step("evolution_analysis", success=True, metadata={"patterns_found": len(patterns)})
         
-        # Step 4: Code analysis
-        print("\n[4/9] Code analysis...")
-        analysis_results = []
-        for file_path in context.get("files", []):
-            if file_path in orphaned_files:
-                continue  # Skip orphaned files
-            content = reader.read_file(file_path)
-            if content:
-                issues = analyzer.analyze_file(content, file_path)
-                analysis_results.extend(issues)
-        print(f"Found {len(analysis_results)} code issues")
+        # Step 5: Decision engine
+        tracker.start_step("decision_engine")
+        decision = DecisionEngine()
+        plan = decision.generate_next_action(cycle, patterns, dep_report)
+        has_plan = plan is not None and plan.get('action') is not None
+        tracker.end_step("decision_engine", success=has_plan, metadata={"action": plan.get('action') if has_plan else None})
         
-        # Step 5: Evolution analysis (learn from history)
-        print("\n[5/9] Evolution analysis...")
-        patterns = evo_analyzer.analyze_patterns()
-        recent_failures = evo_analyzer.detect_failure_patterns()
-        if recent_failures:
-            print(f"Warning: {len(recent_failures)} recent failures detected")
+        if has_plan:
+            # Step 6: Evolution execution
+            tracker.start_step("evolution_execution")
+            executor = EvolutionExecutor()
+            success, result = executor.execute_plan(plan, cycle)
+            tracker.end_step("evolution_execution", success=success, metadata={"files_modified": len(result) if isinstance(result, list) else 0})
+            
+            # Step 7: Validation
+            tracker.start_step("validation")
+            validator = OutputValidator()
+            valid, errors = validator.validate_plan_structure(plan)
+            tracker.end_step("validation", success=valid, metadata={"errors": len(errors) if errors else 0})
         
-        # Step 6: Decision making
-        print("\n[6/9] Decision making...")
-        plan = decision.generate_evolution_plan(context, analysis_results)
-        plan['cycle'] = current_cycle
-        print(f"Decision: {plan.get('action', 'none')} - {plan.get('summary', 'No action')}")
+        # Step 8: Backup management
+        tracker.start_step("backup_management")
+        backup = BackupManager()
+        cleanup_result = backup.cleanup_old_backups(cycle)
+        stats = backup.get_storage_stats()
+        tracker.end_step("backup_management", success=True, metadata={"space_mb": stats.get('total_size_mb', 0)})
         
-        # Step 7: Plan validation
-        print("\n[7/9] Plan validation...")
-        valid, errors = validator.validate_plan_structure(plan)
-        if not valid:
-            print(f"Validation failed: {errors}")
-            return 1
-        print("Plan validation passed")
+        # Step 9: Test running
+        tracker.start_step("test_runner")
+        runner = TestRunner()
+        test_results = runner.run_all_tests()
+        passed = test_results.get('passed', 0)
+        total = test_results.get('total', 0)
+        tracker.end_step("test_runner", success=passed > 0, metadata={"passed": passed, "total": total})
         
-        # Step 8: Evolution execution
-        print("\n[8/9] Evolution execution...")
-        success, executed = executor.execute_plan(plan, current_cycle)
-        if not success:
-            print(f"Execution failed: {executed}")
-            return 1
-        print(f"Successfully executed: {executed}")
+        # Step 10: Maintenance
+        tracker.start_step("maintenance")
+        maint = MaintenanceEngine()
+        maint.compact_evolution_log()
+        maint.cleanup_orphaned_files(dep_report.get('orphaned', []))
+        tracker.end_step("maintenance", success=True)
         
-        # Step 9: Backup cleanup
-        print("\n[9/9] Backup management...")
-        cleanup_result = backup.cleanup_old_backups(current_cycle)
-        storage_stats = backup.get_storage_stats()
-        print(f"Backups: {cleanup_result.get('removed', 0)} removed, {storage_stats.get('total_size_mb', 0):.2f}MB total")
+        # Save performance metrics and generate report
+        tracker.save_metrics(cycle)
+        report = tracker.generate_report()
         
-        # Step 10: Maintenance (NEW - Cycle 36)
-        print("\n[10/10] Maintenance...")
+        print(f"\n=== Cycle {cycle} Complete ===")
+        for line in report:
+            print(line)
         
-        # Remove orphaned files identified in step 2
-        if orphaned_files:
-            maintenance_result = maintenance.cleanup_orphaned_files(orphaned_files)
-            print(f"Removed {maintenance_result.get('removed', 0)} orphaned files")
-        
-        # Compact evolution log to prevent unbounded growth
-        compact_result = maintenance.compact_evolution_log(current_cycle)
-        if compact_result.get('compacted', False):
-            print(f"Compacted evolution log: {compact_result.get('archived_entries', 0)} entries archived")
-        
-        # Archive old backups for audit trails
-        archive_result = maintenance.archive_old_backups(current_cycle, retention_cycles=20)
-        if archive_result.get('archived', 0) > 0:
-            print(f"Archived {archive_result.get('archived', 0)} old backups")
-        
-        print(f"\n=== Cycle #{current_cycle} completed successfully ===")
+        # Identify bottlenecks for next cycle
+        bottlenecks = tracker.identify_bottlenecks()
+        if bottlenecks:
+            print("\nBottlenecks detected:")
+            for b in bottlenecks:
+                print(f"  - {b}")
+            
         return 0
         
     except Exception as e:
-        print(f"\n!!! Critical error in cycle execution: {e}")
+        tracker.end_step("cycle", success=False, metadata={"error": str(e)})
+        tracker.save_metrics(cycle)
+        print(f"Cycle failed: {e}")
         import traceback
         traceback.print_exc()
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
