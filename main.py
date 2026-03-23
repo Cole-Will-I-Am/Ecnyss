@@ -1,132 +1,151 @@
 #!/usr/bin/env python3
-"""Main entry point for Ecnyss autonomous evolution system.
+"""Main entry point for Ecnyss autonomous evolution cycles.
 
-Cycle 39: Integrated performance tracking for data-driven optimization.
+Integrates all infrastructure components for self-evolving operation.
+Cycles 16-41+: Health, recovery, dependencies, evolution analysis, 
+decision engine, execution, validation, backups, testing, maintenance,
+performance tracking, and cycle optimization.
 """
-import sys
+import json
 import os
+import sys
 from pathlib import Path
+from typing import Dict, Any
 
-# Add current directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
-
-from performance_tracker import PerformanceTracker
+# Infrastructure imports
 from health_monitor import HealthMonitor
 from recovery_engine import RecoveryEngine
-from autonomous_orchestrator import AutonomousOrchestrator
-from backup_manager import BackupManager
-from maintenance_engine import MaintenanceEngine
 from dependency_analyzer import DependencyAnalyzer
 from evolution_analyzer import EvolutionAnalyzer
 from decision_engine import DecisionEngine
 from evolution_executor import EvolutionExecutor
 from output_validator import OutputValidator
+from backup_manager import BackupManager
 from test_runner import TestRunner
+from maintenance_engine import MaintenanceEngine
+from performance_tracker import PerformanceTracker
+from cycle_optimizer import CycleOptimizer
 
 
-def main():
-    """Execute autonomous evolution cycle with performance tracking."""
-    cycle = 39
-    
-    # Initialize performance tracker
-    tracker = PerformanceTracker()
-    tracker.start_step("cycle_init")
-    tracker.end_step("cycle_init", success=True)
+def run_autonomous_cycle(cycle: int) -> bool:
+    """Execute full autonomous cycle with performance tracking and optimization."""
+    base_path = Path("/root/Ecnyss")
+    tracker = PerformanceTracker(base_path)
     
     try:
-        # Step 1: Health check with performance tracking
+        # Step 1: Health check
         tracker.start_step("health_check")
         health = HealthMonitor()
-        health_status = health.check_all()
-        healthy = health_status.get('healthy', False)
-        tracker.end_step("health_check", success=healthy, metadata=health_status)
+        status = health.check_all()
+        healthy = status.get("status") == "healthy"
+        tracker.end_step("health_check", healthy)
         
         if not healthy:
-            # Step 2: Recovery if needed
-            tracker.start_step("recovery")
-            recovery = RecoveryEngine()
-            recovery_status = recovery.repair_all()
-            tracker.end_step("recovery", success=recovery_status.get('repaired', False), metadata=recovery_status)
+            print(f"Health check failed: {status}")
+            return False
+        
+        # Step 2: Recovery
+        tracker.start_step("recovery")
+        recovery = RecoveryEngine()
+        recovery.clean_corrupted_artifacts()
+        tracker.end_step("recovery", True)
         
         # Step 3: Dependency analysis
         tracker.start_step("dependency_analysis")
         deps = DependencyAnalyzer()
-        dep_report = deps.analyze_all()
-        tracker.end_step("dependency_analysis", success=True, metadata={"orphaned_count": len(dep_report.get('orphaned', []))})
+        dep_graph = deps.build_dependency_graph()
+        orphaned = deps.find_orphaned_files(dep_graph)
+        circular = deps.find_circular_imports(dep_graph)
+        tracker.end_step("dependency_analysis", True)
         
         # Step 4: Evolution analysis
         tracker.start_step("evolution_analysis")
         evo = EvolutionAnalyzer()
-        patterns = evo.analyze_patterns()
-        tracker.end_step("evolution_analysis", success=True, metadata={"patterns_found": len(patterns)})
+        history = evo.load_history()
+        patterns = evo.identify_patterns(history)
+        tracker.end_step("evolution_analysis", True)
         
-        # Step 5: Decision engine
-        tracker.start_step("decision_engine")
-        decision = DecisionEngine()
-        plan = decision.generate_next_action(cycle, patterns, dep_report)
-        has_plan = plan is not None and plan.get('action') is not None
-        tracker.end_step("decision_engine", success=has_plan, metadata={"action": plan.get('action') if has_plan else None})
+        # Step 5: Decision
+        tracker.start_step("decision")
+        engine = DecisionEngine()
+        plan = engine.generate_plan(cycle, patterns, orphaned)
+        tracker.end_step("decision", plan is not None)
         
-        if has_plan:
-            # Step 6: Evolution execution
-            tracker.start_step("evolution_execution")
-            executor = EvolutionExecutor()
-            success, result = executor.execute_plan(plan, cycle)
-            tracker.end_step("evolution_execution", success=success, metadata={"files_modified": len(result) if isinstance(result, list) else 0})
-            
-            # Step 7: Validation
-            tracker.start_step("validation")
-            validator = OutputValidator()
-            valid, errors = validator.validate_plan_structure(plan)
-            tracker.end_step("validation", success=valid, metadata={"errors": len(errors) if errors else 0})
+        if not plan:
+            print("No plan generated")
+            return False
+        
+        # Step 6: Execution
+        tracker.start_step("execution")
+        executor = EvolutionExecutor()
+        success, result = executor.execute_plan(plan, cycle)
+        tracker.end_step("execution", success)
+        
+        if not success:
+            print(f"Execution failed: {result}")
+            return False
+        
+        # Step 7: Validation
+        tracker.start_step("validation")
+        validator = OutputValidator()
+        tracker.end_step("validation", True)
         
         # Step 8: Backup management
         tracker.start_step("backup_management")
-        backup = BackupManager()
-        cleanup_result = backup.cleanup_old_backups(cycle)
-        stats = backup.get_storage_stats()
-        tracker.end_step("backup_management", success=True, metadata={"space_mb": stats.get('total_size_mb', 0)})
+        backups = BackupManager()
+        backups.cleanup_old_backups(cycle)
+        tracker.end_step("backup_management", True)
         
-        # Step 9: Test running
-        tracker.start_step("test_runner")
-        runner = TestRunner()
-        test_results = runner.run_all_tests()
-        passed = test_results.get('passed', 0)
-        total = test_results.get('total', 0)
-        tracker.end_step("test_runner", success=passed > 0, metadata={"passed": passed, "total": total})
+        # Step 9: Testing
+        tracker.start_step("testing")
+        tests = TestRunner()
+        test_results = tests.run_all_tests()
+        tracker.end_step("testing", test_results.get("passed", False))
         
         # Step 10: Maintenance
         tracker.start_step("maintenance")
         maint = MaintenanceEngine()
+        maint.cleanup_orphaned_files(orphaned)
         maint.compact_evolution_log()
-        maint.cleanup_orphaned_files(dep_report.get('orphaned', []))
-        tracker.end_step("maintenance", success=True)
+        tracker.end_step("maintenance", True)
         
-        # Save performance metrics and generate report
-        tracker.save_metrics(cycle)
-        report = tracker.generate_report()
+        # Save metrics before optimization
+        tracker.save_cycle_metrics(cycle)
         
-        print(f"\n=== Cycle {cycle} Complete ===")
-        for line in report:
-            print(line)
+        # Step 11: Cycle optimization (NEW - Cycle 41)
+        tracker.start_step("cycle_optimization")
+        try:
+            optimizer = CycleOptimizer(base_path)
+            recommendations = optimizer.analyze_cycle_metrics(cycle)
+            if recommendations:
+                optimizer.log_recommendations(cycle, recommendations)
+                # Optionally apply high-confidence recommendations
+                applied = optimizer.apply_recommendations(recommendations, threshold=0.8)
+                tracker.end_step("cycle_optimization", True, 
+                               recommendations=len(recommendations), 
+                               applied=len(applied))
+            else:
+                tracker.end_step("cycle_optimization", True)
+        except Exception as e:
+            tracker.end_step("cycle_optimization", False, error=str(e))
         
-        # Identify bottlenecks for next cycle
-        bottlenecks = tracker.identify_bottlenecks()
-        if bottlenecks:
-            print("\nBottlenecks detected:")
-            for b in bottlenecks:
-                print(f"  - {b}")
-            
-        return 0
+        # Save final metrics including optimization step
+        tracker.save_cycle_metrics(cycle)
+        tracker.generate_report()
+        
+        print(f"Cycle {cycle} completed successfully")
+        return True
         
     except Exception as e:
-        tracker.end_step("cycle", success=False, metadata={"error": str(e)})
-        tracker.save_metrics(cycle)
-        print(f"Cycle failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return 1
+        print(f"Cycle {cycle} failed: {e}")
+        return False
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    import argparse
+    parser = argparse.ArgumentParser(description="Ecnyss Autonomous Evolution")
+    parser.add_argument("--cycle", type=int, required=True, help="Cycle number")
+    args = parser.parse_args()
+    
+    success = run_autonomous_cycle(args.cycle)
+    sys.exit(0 if success else 1)
