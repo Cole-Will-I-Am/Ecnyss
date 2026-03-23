@@ -14,6 +14,7 @@ from datetime import datetime
 # Import existing infrastructure
 from output_validator import OutputValidator
 from state_tracker import StateTracker
+from semantic_validator import SemanticValidator
 
 class EvolutionExecutor:
     """Executes evolution plans safely with validation and rollback."""
@@ -21,6 +22,7 @@ class EvolutionExecutor:
     def __init__(self, base_path: str = "/root/Ecnyss"):
         self.base_path = Path(base_path)
         self.validator = OutputValidator()
+        self.semantic_validator = SemanticValidator()
         self.tracker = StateTracker(base_path)
         self.backup_dir = self.base_path / ".ecnyss_backups"
         self.backup_dir.mkdir(exist_ok=True)
@@ -32,12 +34,21 @@ class EvolutionExecutor:
         if not valid:
             return False, [f"Validation failed: {e}" for e in errors]
         
+        # Validate semantic quality of file contents (cycle 43)
+        files = plan.get('files', [])
+        for file_entry in files:
+            path = file_entry.get('path')
+            content = file_entry.get('content')
+            if content and path:
+                sem_valid, sem_errors = self.semantic_validator.validate_content(content, path)
+                if not sem_valid:
+                    return False, [f"Semantic validation failed for {path}: {e}" for e in sem_errors]
+        
         executed_files = []
         backup_paths = {}
         
         try:
             action = plan.get('action')
-            files = plan.get('files', [])
             
             for file_entry in files:
                 path = file_entry.get('path')
