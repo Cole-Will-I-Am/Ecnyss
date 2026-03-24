@@ -53,7 +53,7 @@ class MaintenanceEngine:
         entries_to_keep = entries[-max_entries:]
         
         # Archive old entries
-        archive_file = self.archive_dir / f"evolution_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.jsonl.gz"
+        archive_file = self.archive_dir / f"evolution_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.jsonl.gz"
         with gzip.open(archive_file, 'wt') as f:
             for entry in entries_to_archive:
                 f.write(json.dumps(entry) + '\n')
@@ -137,7 +137,7 @@ class MaintenanceEngine:
     def run_maintenance(self, current_cycle: int, dependency_report: Optional[Dict] = None) -> Dict[str, Any]:
         """Run full maintenance suite."""
         results = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "cycle": current_cycle,
             "tasks": {}
         }
@@ -152,7 +152,7 @@ class MaintenanceEngine:
         if dependency_report:
             results["tasks"]["orphan_cleanup"] = self.cleanup_orphaned_files(dependency_report)
         
-        self.stats["last_maintenance"] = datetime.utcnow().isoformat()
+        self.stats["last_maintenance"] = datetime.now(timezone.utc).isoformat()
         results["stats"] = self.stats.copy()
         
         return results
