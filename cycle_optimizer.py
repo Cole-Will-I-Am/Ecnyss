@@ -305,6 +305,11 @@ class CycleOptimizer:
             return result['recommendations'][0]
         return None
 
+    def optimize(self, cycle: Optional[int] = None) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        effective_cycle = int(cycle) if cycle is not None else 0
+        return self.analyze_performance(effective_cycle)
+
 
 if __name__ == "__main__":
     optimizer = CycleOptimizer()

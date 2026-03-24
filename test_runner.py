@@ -186,6 +186,16 @@ class TestRunner:
         report = self.run_all_tests()
         return report["overall_status"] == "passed"
 
+    def run(self) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        report = self.run_all_tests()
+        summary = report.get("summary", {})
+        return {
+            "passed": int(summary.get("functions_ok", 0)) + int(summary.get("modules_ok", 0)),
+            "failed": int(summary.get("functions_failed", 0)) + int(summary.get("modules_failed", 0)),
+            "overall_status": report.get("overall_status"),
+        }
+
 if __name__ == "__main__":
     runner = TestRunner()
     report = runner.run_all_tests()

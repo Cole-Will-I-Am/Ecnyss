@@ -31,12 +31,21 @@ class ContextManager:
     
     def build_dependency_graph(self) -> Dict[str, Set[str]]:
         """Build a graph of file dependencies for relevance scoring."""
-        analysis = self.dependency_analyzer.analyze_all_files()
+        if hasattr(self.dependency_analyzer, "analyze_all_files"):
+            analysis = self.dependency_analyzer.analyze_all_files()
+        else:
+            analysis = self.dependency_analyzer.analyze_all()
         graph = defaultdict(set)
         
         # Add import relationships
         for path, deps in analysis.get('dependencies', {}).items():
-            for dep in deps.get('imports', []):
+            if isinstance(deps, dict):
+                imports = deps.get('imports', [])
+            elif isinstance(deps, list):
+                imports = deps
+            else:
+                imports = []
+            for dep in imports:
                 # Map import to likely file path
                 dep_path = dep.replace('.', '/') + '.py'
                 if (self.base_path / dep_path).exists():
@@ -192,7 +201,7 @@ class ContextManager:
         
         return summary
     
-    def get_optimized_context(self, current_cycle: int, 
+    def get_optimized_context(self, current_cycle: int = 0, 
                              target_files: List[str] = None,
                              task_type: str = "evolution") -> Dict[str, Any]:
         """Get fully optimized context for the current cycle."""

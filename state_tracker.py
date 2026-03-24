@@ -27,6 +27,10 @@ class StateTracker:
             "files_created": [],
             "patterns_learned": {}
         }
+
+    def load_state(self) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        return dict(self._state)
     
     def save_state(self):
         """Persist state to disk."""
@@ -88,6 +92,12 @@ class StateTracker:
             "git_status": self.get_git_status(),
             "timestamp": datetime.utcnow().isoformat()
         }
+
+    def capture_state(self, context_files: Optional[List[Dict[str, Any]]] = None) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        summary = self.get_system_summary()
+        summary["context_files"] = context_files or []
+        return summary
 
 if __name__ == "__main__":
     tracker = StateTracker()

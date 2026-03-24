@@ -140,6 +140,14 @@ class ExtractionRepair:
         """Get repair statistics."""
         return self.repair_stats.copy()
 
+    def repair(self, execution_result: Any) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        # Older runner path can call this with executor output (dict), not raw text.
+        if isinstance(execution_result, str):
+            parsed, repairs = self.extract_and_repair(execution_result)
+            return {"repaired": parsed is not None, "repairs": repairs, "parsed": parsed}
+        return {"repaired": False, "repairs": [], "parsed": None}
+
 
 if __name__ == "__main__":
     repair = ExtractionRepair()

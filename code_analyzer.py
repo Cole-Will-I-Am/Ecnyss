@@ -239,6 +239,14 @@ class CodeAnalyzer:
         
         return patterns
 
+    def analyze_all_files(self) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        return self.analyze_all()
+
+    def analyze(self) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        return self.analyze_all()
+
 
 if __name__ == "__main__":
     analyzer = CodeAnalyzer()

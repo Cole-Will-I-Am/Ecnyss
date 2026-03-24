@@ -239,8 +239,18 @@ class EvolutionAnalyzer:
         patterns = report.get("success_patterns", {})
         if "overall_success_rate" in patterns:
             context_parts.append(f"\nOverall Success Rate: {patterns['overall_success_rate']:.1%}")
-        
+
         return "\n".join(context_parts)
+
+    def analyze(self, execution_result: Dict[str, Any]) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        success = bool(execution_result.get("success"))
+        patterns = self.analyze_success_patterns()
+        return {
+            "success": success,
+            "success_rate": patterns.get("overall_success_rate"),
+            "volatile_files": patterns.get("volatile_files", []),
+        }
 
 
 if __name__ == "__main__":

@@ -93,42 +93,37 @@ class CycleDriver:
     
     def _generate_evolution_plan(self, complexity_report: Dict, cycle: int) -> Optional[Dict[str, Any]]:
         """Generate next evolution plan based on system analysis."""
-        # Simple heuristic: if we have < 20 files and low complexity, add functionality
         file_count = len(self.reader.list_python_files())
-        
-        # Check for missing integration points
-        has_driver = (self.base_path / "cycle_driver.py").exists()
-        
-        if not has_driver:
-            # This shouldn't happen since we're running, but check anyway
-            return None
-        
-        # Look for files with high complexity that need refactoring
-        high_complexity = []
-        for file_report in complexity_report.get("files", []):
-            if file_report.get("complexity", 0) > 10:
-                high_complexity.append(file_report["file"])
-        
-        if high_complexity:
-            return {
-                "action": "refactor",
-                "files": [{"path": high_complexity[0], "content": "# Refactored version TBD"}],
-                "summary": f"Refactor high-complexity file: {high_complexity[0]}",
-                "reasoning": f"Complexity score > 10 detected, needs simplification"
-            }
-        
-        # If system is healthy and no urgent refactoring, suggest enhancement
-        if file_count < 20:
-            return {
-                "action": "create",
-                "files": [{
-                    "path": f"evolution_metrics.py",
-                    "content": "#!/usr/bin/env python3\n\"\"\"Metrics collector for Ecnyss evolution tracking.\"\"\"\nimport json\nfrom pathlib import Path\nfrom typing import Dict, List, Any\nfrom datetime import datetime\n\nclass EvolutionMetrics:\n    def __init__(self, base_path=\"/root/Ecnyss\"):\n        self.base_path = Path(base_path)\n        self.metrics_file = self.base_path / \"metrics.jsonl\"\n    \n    def record_cycle_metrics(self, cycle: int, success: bool, duration: float):\n        entry = {\n            \"cycle\": cycle,\n            \"timestamp\": datetime.utcnow().isoformat(),\n            \"success\": success,\n            \"duration\": duration\n        }\n        with open(self.metrics_file, 'a') as f:\n            f.write(json.dumps(entry) + '\\n')\n\nif __name__ == \"__main__\":\n    m = EvolutionMetrics()\n    m.record_cycle_metrics(0, True, 1.0)"
-                }],
-                "summary": "Add evolution metrics collector for performance tracking",
-                "reasoning": "System has 14 files with comprehensive infrastructure. Adding metrics collection to track cycle duration and success rates enables data-driven optimization of the evolution process."
-            }
-        
+        existing_files = {f.name for f in self.base_path.glob("*.py")}
+
+        # Enhancement candidates — each is only proposed if the file doesn't already exist
+        enhancements = [
+            {
+                "path": "evolution_metrics.py",
+                "summary": "Add evolution metrics collector for cycle performance tracking",
+                "content": '#!/usr/bin/env python3\n"""Metrics collector for Ecnyss evolution tracking."""\nimport json\nfrom pathlib import Path\nfrom typing import Dict, Any\nfrom datetime import datetime, timezone\n\n\nclass EvolutionMetrics:\n    """Collect and query per-cycle metrics."""\n\n    def __init__(self, base_path: str = "/root/Ecnyss"):\n        self.base_path = Path(base_path)\n        self.metrics_file = self.base_path / "metrics.jsonl"\n\n    def record(self, cycle: int, success: bool, duration: float, extra: Dict[str, Any] | None = None) -> None:\n        entry = {\n            "cycle": cycle,\n            "timestamp": datetime.now(timezone.utc).isoformat(),\n            "success": success,\n            "duration": round(duration, 3),\n        }\n        if extra:\n            entry.update(extra)\n        with open(self.metrics_file, "a") as f:\n            f.write(json.dumps(entry) + "\\n")\n\n    def recent(self, n: int = 10) -> list:\n        if not self.metrics_file.exists():\n            return []\n        entries = []\n        with open(self.metrics_file) as f:\n            for line in f:\n                line = line.strip()\n                if line:\n                    try:\n                        entries.append(json.loads(line))\n                    except json.JSONDecodeError:\n                        continue\n        return entries[-n:]\n\n\nif __name__ == "__main__":\n    m = EvolutionMetrics()\n    m.record(0, True, 1.0)\n    print(m.recent())\n',
+            },
+            {
+                "path": "cycle_scheduler.py",
+                "summary": "Add cron-style scheduler for timed autonomous evolution cycles",
+                "content": '#!/usr/bin/env python3\n"""Scheduler for running Ecnyss evolution cycles on a timer."""\nimport time\nimport sys\nfrom pathlib import Path\nfrom datetime import datetime, timezone\n\nsys.path.insert(0, str(Path(__file__).parent))\n\nfrom cycle_driver import CycleDriver\n\n\ndef run_loop(interval_seconds: int = 420, max_cycles: int = 0) -> None:\n    """Run evolution cycles in a loop with a sleep interval.\n\n    Args:\n        interval_seconds: Pause between cycles (default 7 minutes).\n        max_cycles: Stop after this many cycles (0 = unlimited).\n    """\n    driver = CycleDriver()\n    completed = 0\n    while max_cycles == 0 or completed < max_cycles:\n        ts = datetime.now(timezone.utc).isoformat()\n        print(f"[scheduler] {ts} — starting cycle")\n        try:\n            success = driver.run_autonomous_cycle()\n            status = "ok" if success else "failed"\n        except Exception as exc:\n            status = f"error: {exc}"\n        completed += 1\n        print(f"[scheduler] cycle {completed} {status}, sleeping {interval_seconds}s")\n        time.sleep(interval_seconds)\n\n\nif __name__ == "__main__":\n    interval = int(sys.argv[1]) if len(sys.argv) > 1 else 420\n    run_loop(interval_seconds=interval)\n',
+            },
+            {
+                "path": "git_integrator.py",
+                "summary": "Add standalone git integration for auto-committing evolution results",
+                "content": '#!/usr/bin/env python3\n"""Git integration helper for Ecnyss autonomous commits."""\nimport subprocess\nfrom pathlib import Path\nfrom typing import List, Optional\n\n\nclass GitIntegrator:\n    """Lightweight git operations scoped to the Ecnyss repo."""\n\n    def __init__(self, repo_path: str = "/root/Ecnyss"):\n        self.repo = Path(repo_path)\n\n    def _run(self, args: List[str], timeout: int = 30) -> subprocess.CompletedProcess:\n        return subprocess.run(\n            ["git", "-C", str(self.repo), *args],\n            capture_output=True, text=True, timeout=timeout,\n        )\n\n    def has_changes(self) -> bool:\n        r = self._run(["status", "--porcelain"])\n        return bool(r.stdout.strip())\n\n    def stage_files(self, paths: List[str]) -> None:\n        for p in paths:\n            self._run(["add", "--", p])\n\n    def commit(self, message: str) -> bool:\n        r = self._run(["commit", "-m", message])\n        return r.returncode == 0\n\n    def push(self, remote: str = "origin", branch: Optional[str] = None) -> bool:\n        if branch is None:\n            r = self._run(["rev-parse", "--abbrev-ref", "HEAD"])\n            branch = r.stdout.strip() or "main"\n        r = self._run(["push", remote, branch], timeout=60)\n        return r.returncode == 0\n\n    def log(self, n: int = 5) -> str:\n        r = self._run(["log", "--oneline", f"-{n}"])\n        return r.stdout.strip()\n\n\nif __name__ == "__main__":\n    gi = GitIntegrator()\n    print("Has changes:", gi.has_changes())\n    print("Recent commits:")\n    print(gi.log())\n',
+            },
+        ]
+
+        for enh in enhancements:
+            if enh["path"] not in existing_files:
+                return {
+                    "action": "create",
+                    "files": [{"path": enh["path"], "content": enh["content"]}],
+                    "summary": enh["summary"],
+                    "reasoning": f"Cycle {cycle}: system has {file_count} files. Adding {enh['path']} to improve autonomous capabilities.",
+                }
+
         return None
     
     def _get_next_cycle(self) -> int:

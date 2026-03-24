@@ -136,12 +136,21 @@ class EvolutionDecisionEngine:
         # Autonomous mode: analyze code quality and suggest improvements
         if state["recent_failure_rate"] > 0.2:
             # High failure rate - defensive action
+            recovery_content = f'''#!/usr/bin/env python3
+"""Recovery mode module generated in cycle {state['current_cycle']}."""
+from datetime import datetime
+
+
+def recovery_status() -> dict:
+    """Return recovery context for observability."""
+    return {{"mode": "recovery", "cycle": {state['current_cycle']}, "timestamp": datetime.utcnow().isoformat()}}
+'''
             return {
                 "action": "create",
                 "files": [
                     {
                         "path": "recovery_mode.py",
-                        "content": "# Recovery mode - high failure rate detected\n"
+                        "content": recovery_content
                     }
                 ],
                 "summary": "Enter recovery mode due to high failure rate",
@@ -149,12 +158,21 @@ class EvolutionDecisionEngine:
             }
         
         # Normal autonomous operation
+        module_content = f'''#!/usr/bin/env python3
+"""Autonomous capability module generated in cycle {state['current_cycle']}."""
+from datetime import datetime
+
+
+def capability_status() -> dict:
+    """Return basic status metadata for this generated module."""
+    return {{"generated_cycle": {state['current_cycle']}, "generated_at": datetime.utcnow().isoformat()}}
+'''
         return {
             "action": "create",
             "files": [
                 {
                     "path": f"autonomous_module_{state['current_cycle']}.py",
-                    "content": f"# Autonomous generation cycle {state['current_cycle']}\n"
+                    "content": module_content
                 }
             ],
             "summary": "Autonomous module generation",
@@ -278,6 +296,13 @@ See `evolution.jsonl` for the full history of every cycle.
                 errors
             )
         return json.dumps(plan, indent=2)
+
+
+class DecisionEngine(EvolutionDecisionEngine):
+    """Compatibility wrapper used by older runners."""
+
+    def decide(self, _state: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        return self.generate_evolution_plan()
 
 
 def main():

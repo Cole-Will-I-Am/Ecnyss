@@ -199,6 +199,25 @@ class PerformanceTracker:
         
         return recommendations if recommendations else ["No significant issues detected"]
 
+    def record_cycle(self, cycle: int, duration: float, analysis: Dict[str, Any]) -> None:
+        """Compatibility wrapper used by older runners."""
+        entry = {
+            "cycle": cycle,
+            "timestamp": datetime.utcnow().isoformat(),
+            "total_time_sec": round(float(duration), 3),
+            "memory_delta_mb": 0.0,
+            "overall_success": bool(analysis.get("success", False)),
+            "steps": {
+                "legacy_cycle_record": {
+                    "time_sec": round(float(duration), 3),
+                    "memory": {},
+                    "outcome": {"success": bool(analysis.get("success", False)), "error": None},
+                }
+            },
+        }
+        with open(self.metrics_file, 'a') as f:
+            f.write(json.dumps(entry) + '\n')
+
 
 if __name__ == "__main__":
     tracker = PerformanceTracker()

@@ -78,7 +78,7 @@ class HealthMonitor:
         entries = self.reader.read_evolution_log()
         recent = entries[-window:] if len(entries) >= window else entries
         
-        failures = [e for e in recent if e.get('status') != 'ok']
+        failures = [e for e in recent if self._is_failure_status(e.get('status'))]
         
         return {
             "recent_cycles": len(recent),
@@ -92,11 +92,16 @@ class HealthMonitor:
         """Count consecutive failures at the end of the log."""
         count = 0
         for entry in reversed(entries):
-            if entry.get('status') != 'ok':
+            if self._is_failure_status(entry.get('status')):
                 count += 1
             else:
                 break
         return count
+
+    def _is_failure_status(self, status: Any) -> bool:
+        """Return True only for real failure statuses."""
+        status_str = str(status or "").strip().lower()
+        return status_str in {"failed", "error", "crashed"}
     
     def generate_health_report(self) -> Dict[str, Any]:
         """Generate comprehensive health report."""
@@ -158,6 +163,16 @@ class HealthMonitor:
         """Quick check for orchestrator integration."""
         report = self.generate_health_report()
         return report["overall_status"] == "healthy"
+
+    def check(self) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        report = self.generate_health_report()
+        return {
+            "healthy": report.get("overall_status") == "healthy",
+            "overall_status": report.get("overall_status"),
+            "file_health": report.get("file_health", {}),
+            "evolution_health": report.get("evolution_health", {}),
+        }
 
 if __name__ == "__main__":
     monitor = HealthMonitor()

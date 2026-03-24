@@ -63,6 +63,10 @@ class SemanticValidator:
             errors.extend(py_errors)
         
         return len(errors) == 0, errors
+
+    def validate_content(self, content: str, filepath: str) -> Tuple[bool, List[str]]:
+        """Compatibility wrapper used by older runners."""
+        return self.validate_file(content, filepath)
     
     def _validate_python(self, content: str) -> Tuple[bool, List[str]]:
         """Validate Python-specific semantics."""
@@ -109,6 +113,14 @@ class SemanticValidator:
                 file_errors[path] = errors
         
         return all_valid, file_errors
+
+    def validate(self, execution_result: Dict[str, Any]) -> bool:
+        """Compatibility wrapper used by older runners."""
+        if not isinstance(execution_result, dict):
+            return False
+        if execution_result.get("success") is False:
+            return False
+        return True
     
     def check_degeneration(self, content: str, context: str = "") -> Tuple[bool, str]:
         """Quick check for obvious degeneration patterns.

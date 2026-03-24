@@ -103,6 +103,12 @@ class OutputValidator:
         
         return text.strip()
 
+    def validate(self, execution_result) -> bool:
+        """Compatibility wrapper used by older runners."""
+        if isinstance(execution_result, dict):
+            return bool(execution_result.get("success", False))
+        return False
+
 if __name__ == "__main__":
     # Test validation
     validator = OutputValidator()

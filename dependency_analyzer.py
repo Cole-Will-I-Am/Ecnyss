@@ -156,7 +156,7 @@ class DependencyAnalyzer:
         for file in self.dependencies:
             has_deps = len(self.dependencies[file]) > 0
             has_dependents = len(self.dependents.get(file, [])) > 0
-            if not has_deps and not_dependents:
+            if not has_deps and not has_dependents:
                 orphans.append(file)
         return sorted(orphans)
     
@@ -254,6 +254,14 @@ class DependencyAnalyzer:
         
         with open(self.base_path / "evolution.jsonl", 'a') as f:
             f.write(json.dumps(entry) + '\n')
+
+    def analyze_all_files(self) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        return self.analyze_all()
+
+    def analyze(self) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        return self.analyze_all()
 
 
 if __name__ == "__main__":

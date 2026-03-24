@@ -117,6 +117,10 @@ class RecoveryEngine:
         
         return results
 
+    def recover(self) -> Dict[str, Any]:
+        """Compatibility wrapper used by older runners."""
+        return self.emergency_repair()
+
 if __name__ == "__main__":
     engine = RecoveryEngine()
     results = engine.emergency_repair()
