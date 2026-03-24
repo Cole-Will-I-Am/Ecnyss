@@ -153,14 +153,14 @@ class EvolutionDecisionEngine:
             report = {}
 
         # Strategy 1: Fix deprecated datetime.now(timezone.utc) calls across the codebase
+        # Build search/replace strings dynamically so they don't get self-replaced
+        _deprecated = "datetime." + "utcnow()"
+        _replacement = "datetime.now(timezone.utc)"
         deprecated_files = self._find_deprecated_datetime_files(state)
         if deprecated_files:
             target = deprecated_files[0]
             original = Path(self.base_path / target).read_text()
-            fixed = original.replace(
-                "datetime.now(timezone.utc)",
-                "datetime.now(timezone.utc)",
-            )
+            fixed = original.replace(_deprecated, _replacement)
             # Ensure timezone import exists
             if "from datetime import" in fixed and "timezone" not in fixed:
                 fixed = fixed.replace(
@@ -170,9 +170,9 @@ class EvolutionDecisionEngine:
             return {
                 "action": "modify",
                 "files": [{"path": target, "content": fixed}],
-                "summary": f"Fix deprecated datetime.now(timezone.utc) in {target}",
+                "summary": f"Fix deprecated utcnow() in {target}",
                 "reasoning": (
-                    f"Cycle {cycle}: {target} uses deprecated datetime.now(timezone.utc). "
+                    f"Cycle {cycle}: {target} uses deprecated utcnow(). "
                     "Migrating to timezone-aware datetime.now(timezone.utc)."
                 ),
             }
@@ -301,14 +301,16 @@ def recovery_status() -> dict:
         }
 
     def _find_deprecated_datetime_files(self, state: Dict[str, Any]) -> List[str]:
-        """Find .py files still using datetime.now(timezone.utc)."""
+        """Find .py files still using the deprecated utcnow() pattern."""
+        # Build pattern dynamically so evolution executor doesn't mangle it
+        pattern = "datetime." + "utcnow()"
         results = []
         for fname in state["python_files"]:
             fpath = self.base_path / fname
             if fpath.exists():
                 try:
                     text = fpath.read_text()
-                    if "datetime.now(timezone.utc)" in text:
+                    if pattern in text:
                         results.append(fname)
                 except Exception:
                     continue
