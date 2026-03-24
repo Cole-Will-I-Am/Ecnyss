@@ -61,7 +61,7 @@ class CycleOptimizer:
                 "critical_bottlenecks": len([b for b in bottleneck_analysis if b["severity"] == "critical"]),
                 "estimated_time_saved_ms": sum(r.get("potential_savings_ms", 0) for r in recommendations)
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat()
         }
         
         self._save_recommendations(result)
