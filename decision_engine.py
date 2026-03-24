@@ -301,19 +301,25 @@ def recovery_status() -> dict:
         }
 
     def _find_deprecated_datetime_files(self, state: Dict[str, Any]) -> List[str]:
-        """Find .py files still using the deprecated utcnow() pattern."""
-        # Build pattern dynamically so evolution executor doesn't mangle it
+        """Find .py files with actual deprecated utcnow() calls (not string refs)."""
         pattern = "datetime." + "utcnow()"
         results = []
         for fname in state["python_files"]:
             fpath = self.base_path / fname
             if fpath.exists():
                 try:
-                    text = fpath.read_text()
-                    if pattern in text:
-                        results.append(fname)
+                    tree = ast.parse(fpath.read_text())
                 except Exception:
                     continue
+                # Walk AST for real method calls: datetime.utcnow()
+                for node in ast.walk(tree):
+                    if (
+                        isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Attribute)
+                        and node.func.attr == "utcnow"
+                    ):
+                        results.append(fname)
+                        break
         return results
 
     def _find_modules_missing_all(self, state: Dict[str, Any]) -> List[str]:

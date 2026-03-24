@@ -9,7 +9,7 @@ import json
 import sys
 from pathlib import Path
 from typing import Dict, Any, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Ensure imports work when running from /root/Ecnyss
 sys.path.insert(0, str(Path(__file__).parent))
@@ -124,7 +124,11 @@ class CycleDriver:
                     "reasoning": f"Cycle {cycle}: system has {file_count} files. Adding {enh['path']} to improve autonomous capabilities.",
                 }
 
-        return None
+        # Static enhancements exhausted — delegate to DecisionEngine for autonomous planning
+        from decision_engine import DecisionEngine
+        engine = DecisionEngine(str(self.base_path))
+        plan = engine.generate_evolution_plan()
+        return plan
     
     def _get_next_cycle(self) -> int:
         """Get next cycle number from evolution log."""
@@ -136,7 +140,7 @@ class CycleDriver:
     def _log_event(self, event: str, cycle: int, message: str):
         """Log driver event to cycle log."""
         entry = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "event": event,
             "cycle": cycle,
             "message": message
